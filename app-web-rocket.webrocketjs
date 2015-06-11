@@ -1,0 +1,208 @@
+function xmlToJson(xml) {
+	
+	// Create the return object
+	var obj = {};
+
+	if (xml.nodeType == 1) { // element
+		// do attributes
+		if (xml.attributes.length > 0) {
+		obj["@attributes"] = {};
+			for (var j = 0; j < xml.attributes.length; j++) {
+				var attribute = xml.attributes.item(j);
+				obj["@attributes"][attribute.nodeName] = attribute.nodeValue;
+			}
+		}
+	} else if (xml.nodeType == 3) { // text
+		obj = xml.nodeValue;
+	}
+
+	// do children
+	if (xml.hasChildNodes()) {
+		for(var i = 0; i < xml.childNodes.length; i++) {
+			var item = xml.childNodes.item(i);
+			var nodeName = item.nodeName;
+			if (typeof(obj[nodeName]) == "undefined") {
+				obj[nodeName] = xmlToJson(item);
+			} else {
+				if (typeof(obj[nodeName].push) == "undefined") {
+					var old = obj[nodeName];
+					obj[nodeName] = [];
+					obj[nodeName].push(old);
+				}
+				obj[nodeName].push(xmlToJson(item));
+			}
+		}
+	}
+	return obj;
+}
+
+function parseCoord(str)
+{
+    var coordArray = str.split(" ");
+    var coord = {};
+    var lon = parseFloat(coordArray[0]);
+    var lat = parseFloat(coordArray[1]);
+
+    if (!isNaN(lon))
+        coord.lon = lon;
+
+    if (!isNaN(lat))
+        coord.lat = lat;
+
+    return coord;
+}
+
+var WebRocketApplication = IApplication.$extend(
+{
+    __init__ : function()
+    {
+        this.$super("Meshmoon GEO");
+        
+        this.data = {};
+        
+        this.timing = new AsyncHelper(this.name, this);
+        this.state =
+        {
+            camera : {}
+        };
+
+        // Monitor active camera change
+        var activeCamera = Tundra.renderer.activeCameraEntity();
+        if (activeCamera != null && activeCamera.camera != null)
+            this.onActiveCameraChanged(activeCamera.camera);
+
+        this.subscribeEvent(Tundra.renderer.onActiveCameraChanged(this, this.onActiveCameraChanged));
+
+        // Run RTS camera application
+        this.rts = {};
+        this.rts.ent = Tundra.client.runApplication("RTS", "meshmoon-applications://meshmoon/rts-camera/rts-camera.webrocketjs");
+        this.rts.ent.script.onScriptStarted(function(entity, component, scriptAsset, app) {
+            this.rts.app = app;
+        }.bind(this));
+
+        // You can turn on debugging to see more internals
+        //Tundra.plugins.meshmoonGeo.config.debug = true; // and/or
+        //Tundra.plugins.meshmoonGeo.config.debugVolume = true;
+        
+        /* Run Meshmoon GEO at Oulu city center
+           You can change this coordinate to be anywhere in the world
+           and Meshmoon GEO will do its best to visualize the location. */
+        Tundra.plugins.meshmoonGeo.start({
+            lon : 25.466228,
+            lat : 65.013439
+        });
+
+        // Setup default environment
+        Tundra.plugins.meshmoonGeo.setupEnvironment();
+        
+        this.imageElement = $("<img/>");
+        this.imageElement.css({
+            "position" : "absolute",
+            "top" : 25,
+            "left" : 25
+        })
+        this.imageElement.hide();
+ 
+        this.framework.ui.addWidgetToScene([this.imageElement]);
+        
+        this.subscribeEvent(Tundra.input.onMousePress(this, this.onMousePress));
+        
+        var transfer = Tundra.asset.requestAsset("http://www.oulunliikenne.fi/rss/weather_camera/camera.xml");
+        if (transfer != null)
+        {
+            transfer.onCompleted(this, this.onAssetTransferCompleted);
+        }
+        
+    },
+    
+    onAssetTransferCompleted: function(asset)
+    {
+        var obj = xmlToJson(asset.data);
+        console.log(obj);
+ 
+        if (obj.rss && obj.rss.channel && obj.rss.channel.item && typeof obj.rss.channel.item == "object")
+        {
+            var items = obj.rss.channel.item;
+            
+            for (var i = 0; i < items.length; i++)
+            {
+                var oneItem = items[i];
+                
+                if (typeof oneItem["georss:point"] != "object")
+                    continue;
+                
+                var coord = parseCoord(oneItem["georss:point"]["#text"]);
+                
+                var pos = Tundra.plugins.meshmoonGeo.coordinates.latLonToWorldPosition(coord.lat, coord.lon);
+                
+                var entity = Tundra.scene.createLocalEntity(["Name", "Mesh", "Placeable"]);
+
+                entity.name = "ent_"+i;
+
+                entity.mesh.meshRef = "http://meshmoon.eu.scenes.1.s3.amazonaws.com/ligas-401829/test-layer/sphere/sphere.mesh";
+                entity.mesh.materialRefs = [
+                    "http://meshmoon.eu.scenes.1.s3.amazonaws.com/ligas-401829/test-layer/sphere/sphere_yellow.material"
+                    ];
+
+                entity.placeable.setPosition(new THREE.Vector3(pos.x, 150, pos.z));
+                entity.placeable.setScale(new THREE.Vector3(100, 100, 100));
+                
+                this.data[entity.id] = {
+                    title : oneItem.title["#text"],
+                    link  : oneItem.link["#text"],
+                    entId : entity.id
+                };
+            }
+ 
+        }
+    },
+    
+    onMousePress : function(event){
+        var r = Tundra.renderer.raycast();
+        if (r.entity && this.data[r.entity.id])
+        {
+            console.log(this.data[r.entity.id].title);
+            this.imageElement.attr("src", this.data[r.entity.id].link);
+            this.imageElement.show();
+        }
+        else
+            this.imageElement.hide();
+    },
+    
+    onActiveCameraChanged : function(activeCameraComponent, prevCameraComponent)
+    {
+        var cameraName = (activeCameraComponent.parentEntity ? activeCameraComponent.parentEntity.name : "");
+        if (cameraName === "" || !cameraName)
+            return;
+
+        // Adjust far plane to handle big scene for Meshmoon GEO functionality
+        this.camera = activeCameraComponent.parentEntity;
+        this.camera.camera.farPlane = 1000000;
+
+        this.log.debug("Active camera changed", this.camera.name);
+
+        // If RTS camera execute configuration
+        if (this.camera.name === "MeshmoonRtsCamera" && this.state.camera.configured === undefined)
+        {
+            this.state.camera.configured = true;
+            this.timing.async("rts.config", function() {
+                this.camera.exec(EntityAction.Local, "SetRotation", { x : -40, y : 0, z : 0 });
+                this.camera.exec(EntityAction.Local, "SetDistance", 3000);
+                this.camera.exec(EntityAction.Local, "SetMinDistance", 200);
+                this.camera.exec(EntityAction.Local, "SetMaxDistance", this.camera.camera.farPlane * 0.4);
+            }, 100);
+        }
+    },
+
+    /** 
+        Script destroy/unload handler. Called automatically 
+        by the framework when the application is closed.
+    */
+    onScriptDestroyed : function()
+    {
+        Tundra.plugins.meshmoonGeo.stop();
+    }
+});
+
+// Start the application by instantiating it
+var webRocketApplication = new WebRocketApplication();
