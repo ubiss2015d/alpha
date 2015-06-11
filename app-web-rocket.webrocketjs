@@ -1,4 +1,3 @@
-
 var WebRocketApplication = IApplication.$extend(
 {
 
@@ -147,17 +146,18 @@ var WebRocketApplication = IApplication.$extend(
 	
     onMousePress: function(event)
     {
+        alert("Hello");
         var r = Tundra.renderer.raycast();
         if (r.entity && this.data[r.entity.id])
         {
             console.log(this.data[r.entity.id].title);
 
             this.imageElement.attr("src", this.data[r.entity.id].link);
-            this.imageElement.show();
+            //this.imageElement.show();
         }
         else
             this.imageElement.hide();
-    },,
+    },
 
     onActiveCameraChanged : function(activeCameraComponent, prevCameraComponent)
     {
