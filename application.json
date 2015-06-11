@@ -2,7 +2,7 @@
     "Name": "Alpha-Dashboard",
     "Description": "",
     "Txml": "scene.txml",
-    "Img": "application.jpg",
+    "Img": "scene.jpg",
     "SourceDir": "",
     "SourceWebRocket": "app-web-rocket.webrocketjs",
     "SourceRocket": "",
