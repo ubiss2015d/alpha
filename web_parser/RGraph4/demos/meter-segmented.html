@@ -1,0 +1,106 @@
+<!DOCTYPE html >
+<html>
+<head>
+    <link rel="stylesheet" href="demos.css" type="text/css" media="screen" />
+    
+    <script src="../libraries/RGraph.common.core.js" ></script>
+    <script src="../libraries/RGraph.common.dynamic.js" ></script>
+    <script src="../libraries/RGraph.meter.js" ></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <!--[if lt IE 9]><script src="../excanvas/excanvas.js"></script><![endif]-->
+    
+    <title>A basic Meter chart</title>
+    
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="description" content="A basic Meter chart" />
+     
+</head>
+<body>
+
+    <h1>A segmented Meter chart</h1>
+
+    <canvas id="cvs" width="600" height="450">[No canvas support]</canvas>
+    
+    <script>
+        $(document).ready(function ()
+        {
+            var meter = new RGraph.Meter({
+                id: 'cvs',
+                min: 0,
+                max: 100,
+                value:75,
+                options: {
+                    adjustable: true,
+                    angles: {
+                        start: RGraph.PI - 0.55,
+                        end: RGraph.TWOPI + 0.5
+                    },
+                    centery: 300,
+                    linewidth: {
+                        segments: 15
+                    },
+                    text: {
+                        size: 22,
+                        color: 'black'
+                    },
+                    green: {
+                        color: '#0a0'
+                    },
+                    segment: {
+                        radius: {
+                            start: 175
+                        }
+                    },
+                    border: false,
+                    strokestyle: 'white',
+                    tickmarks: {
+                        small: {
+                            num: 0
+                        },
+                        big: {
+                            num: 0
+                        }
+                    },
+                    needle: {
+                        radius: 150,
+                        color: 'gray'
+                    },
+                    text: {
+                        valign: 'bottom'
+                    },
+                    centerpin: {
+                        fill: 'white',
+                        stroke: 'gray'
+                    },
+                    colors: {
+                        ranges: [
+                                 [0,10,'Gradient(#f00:#f00:#c00:#300)'],
+                                 [10,20,'Gradient(#ffa:#ff0:#cc0:#330)'],
+                                 [20,30,'Gradient(#ffa:#ff0:#cc0:#330)'],
+                                 [30,40,'Gradient(#afa:#0f0:#0c0:#030)'],
+                                 [40,50,'Gradient(#afa:#0f0:#0c0:#030)'],
+                                 [50,60,'Gradient(#afa:#0f0:#0c0:#030)'],
+                                 [60,70,'Gradient(#afa:#0f0:#0c0:#030)'],
+                                 [70,80,'Gradient(#afa:#0f0:#0c0:#030)'],
+                                 [80,90,'Gradient(#afa:#0f0:#0c0:#030)'],
+                                 [90,100,'Gradient(#afa:#0f0:#0c0:#030)']
+                                ]
+                    }
+                }
+            }).draw();
+
+        })
+    </script>
+
+    <p>
+        <a href="./">&laquo; Back</a>
+    </p>
+
+
+    <p>
+        <a href="https://www.facebook.com/sharer/sharer.php?u=http://www.rgraph.net" target="_blank" onclick="window.open('https://www.facebook.com/sharer/sharer.php?u=http://www.rgraph.net', null, 'top=50,left=50,width=600,height=368'); return false"><img src="../images/facebook-large.png" width="200" height="43" alt="Share on Facebook" border="0" title="Visit the RGraph Facebook page" /></a>
+        <a href="https://twitter.com/_rgraph" target="_blank" onclick="window.open('https://twitter.com/_rgraph', null, 'top=50,left=50,width=700,height=400'); return false"><img src="../images/twitter-large.png" width="200" height="43" alt="Share on Twitter" border="0" title="Mention RGraph on Twitter" /></a>
+    </p>
+
+</body>
+</html>
