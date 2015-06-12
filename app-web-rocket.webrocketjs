@@ -326,7 +326,7 @@ var WebRocketApplication = IApplication.$extend(
             .fail(function( jqxhr, settings, exception ) {
         });
         
-        this.framework.ui.addWidgetToScene([this.imageElement]);
+        this.framework.ui.addWidgetToScene([this.imageElement]);"http://tundra-blueshift.s3.amazonaws.com/koste/jilin_png/OP_Hotelli.png";
 
         this.subscribeEvent(Tundra.input.onMousePress(this, this.onMousePress));
         this.subscribeEvent(Tundra.input.onMouseMove(this, this.onMouseMove));
@@ -338,11 +338,19 @@ var WebRocketApplication = IApplication.$extend(
 
 	initPolymer: function()
 	{
-		var element = document.createElement("alpha-element");
+		var element = document.createElement("venue-card");
+		element.venueHeader = "SOme venyue";
+		element.venueIcon = "http://tundra-blueshift.s3.amazonaws.com/koste/jilin_png/OP_Hotelli.png";
+		element.appendChild($("<p>Some description about a <a href='http://www.google.com' target='_blank'> venue</a></p>")[0]);
+
 		Tundra.ui.add(element);
-		element.name = "information 1";
-		element.position = "ioformation 2";
-		element.time = "information 3";
+		$(element).width(500);
+		$(element).height(800);
+	
+		
+		//element.name = "information 1";
+//element.position = "ioformation 2";
+		//element.time = "information 3";
     },
     
     onKohteetAssetTransferCompleted: function(asset)
