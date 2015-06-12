@@ -3,10 +3,11 @@
 var concatChar = ';';
 var statData;
 var coordArray;
+var iframeUrl = "http://localhost:8082/data/parser_selector.html";
 
 function readStats()
 {
-	var transfer = Tundra.asset.requestAsset("http://localhost:8082/applications/alpha/data/pno_tilasto_2015_evesav.csv", "Text");
+	var transfer = Tundra.asset.requestAsset("http://localhost:8082/applications/geoexample/data/pno_tilasto_2015_evesav.csv", "Text");
 	transfer.onCompleted(this, function(asset)
 	{
 		statData=generateArraysStats(asset.data);
@@ -108,8 +109,6 @@ function transform(point) {
 
 function generateArraysStats(data)
 {
-
-	console.log('generating arrays');
 	var finalArray=[];
 	var tempArray=[];
 	var lines = data.split('\n');
@@ -129,20 +128,12 @@ function generateArraysStats(data)
 			//if basic data
 			if(j==0)
 			{
-				//console.log('data');
-				//console.log(line[i]);
 				firstPartofLine=line[j].split(',');
-				//console.log(firstPartofLine);
 			}
 			//else if polygon aka 
 			else
 			{
-				//console.log('coords');
-				//console.log(line[i]);
-				
 				coordinates=line[j].replace(/[|&;$%@"<>()+]/g, "").split(', ');
-
-				//console.log(coordinates);
 			}
 
 		}
@@ -327,12 +318,10 @@ var WebRocketApplication = IApplication.$extend(
 
 		$.getScript( "http://svn.osgeo.org/metacrs/proj4js/branches/proj4js-1.0/lib/proj4js-combined.js" )
 			.done(function( script, textStatus ) {
-				console.log("Proj4js.js included" );
 				coordArray = readStats();
 				
 			})
-			.fail(function( jqxhr, settings, exception ) {
-			console.log("++++++++++++++++++++++++++FAILED");	
+			.fail(function( jqxhr, settings, exception ) {	
 		});
 
         // Monitor active camera change
@@ -389,11 +378,24 @@ var WebRocketApplication = IApplication.$extend(
 		IApplication.loadDependencies(this,
             "button1.html"
         ).done(this.initPolymer.bind(this));
-        
+
         var iframe = document.createElement('iframe');
-        iframe.setAttribute("src", "http://localhost:8082/data/parser_selector.html");
+        $(iframe).css({
+            position: "absolute",
+            "background-color" : "white",
+            width: "400px",
+            height: "100%",
+            right: "0px",
+            top : "0px"
+        });
+        iframe.setAttribute("src", iframeUrl + "?suburb=Hiironen");
         document.body.appendChild(iframe);
 	},
+   
+    onAssetLoaded : function(asset)
+    {
+
+    },
 
 	initPolymer: function()
 	{
