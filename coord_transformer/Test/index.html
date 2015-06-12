@@ -1,0 +1,36 @@
+<html>
+    <head>
+        <script src="proj4js-combined.js"></script>
+        <script src="defs/EPSG3067.js"></script>
+        <script src="defs/EPSG900913.js"></script>
+        
+        <script src="defs/EPSG4326.js"></script>
+        
+        <script src="defs/EPSG3857.js"></script>
+        <script src="defs/EPSG3880.js"></script>
+        
+        <script src="defs/EPSG3133.js"></script>
+        
+    </head>
+    <body>
+        <script>
+            var point = {
+                easting: 474854.8, // Note: coming from Y value in kohteet dataset
+                northing: 7218559.1 // Note: coming from X value in kohteet dataset
+            };
+            
+            function transform(point) {
+                var pointObj = new Proj4js.Point(point.easting, point.northing); //Note the order
+                var source_kohteet = new Proj4js.Proj('EPSG:3133');
+                var dest_google = new Proj4js.Proj('EPSG:4326'); //dest_WGS84
+                //After execution, the pointObj should have x (lon) and y (lat) keys for new coordinates values
+                Proj4js.transform(source_kohteet, dest_google, pointObj);
+                return pointObj;
+            }            
+            
+            console.log(transform(point));
+        </script>
+    </body>
+    
+</html>
+
