@@ -1,6 +1,8 @@
 <html>
 
 <head>
+
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no">
     <title>Tester</title>
 
     <script type="text/javascript" src="jquery-1.11.3.min.js"></script>
@@ -19,6 +21,8 @@
 
     <script type="text/javascript" src="RGraph4/libraries/RGraph.common.core.js" ></script>
     <script type="text/javascript" src="RGraph4/libraries/RGraph.bar.js" ></script>
+
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&signed_in=true"></script>
     
     <style>
 
@@ -34,6 +38,7 @@ Testing parsing and transformation possibilities
 <center><canvas id="cvs" width="800" height="500">[No canvas support]</canvas></center><BR>
 <!-- Div which will hold the Output -->
 
+<div id="map-canvas" width="800" height="500"></div>
 
 <center><canvas id="canvas_educ" width="800" height="500">[No canvas support]</canvas></center><BR>
 <center><canvas id="canvas_work" width="800" height="500">[No canvas support]</canvas></center><BR>

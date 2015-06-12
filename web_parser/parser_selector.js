@@ -2,11 +2,17 @@
 
 var concatChar = ';';
 var statData;
-;
+var coordArray;
+
 /*********************************************
 Holds actions taken when the page is loaded
 *********************************************/
+
+
+
 $(document).ready(function(){
+
+
 
 
 
@@ -104,13 +110,22 @@ function readStats()
 			statData=generateArraysStats(response);
 
 			//get coordinates and transform them to WGS84
-			var coordArray=getcoordinateArraysStats(statData);
+			
+			coordArray=getcoordinateArraysStats(statData);
 			//var obj = JSON.parse(response);
 
-	
-		drawAgeDivision(statData);
+			//draw dashboard
+			drawAgeDivision(statData);
 
-	getPostalAreas(statData);		
+			//get postal area names from main data
+			getPostalAreas(statData);
+
+			//calculate if point belongs to disrtict
+			pointInDistrict();		
+
+			//init map functions for testing purposes
+			initializeMap();
+
 
 			/*
 				$.each(response, function(key,val){
@@ -234,15 +249,16 @@ function getcoordinateArraysStats(data)
 					var converted=subArray[i].replace(/[|&;$%@"<>()+]/g, "").split(' ')
 						
 						//send to transform function and add to coordArray
-						subCoordArray.push(transform(converted));
-
-						
-						
+						subCoordArray.push(transformETRStoWGS84(converted) );
+	
 				}
 
 				
 			}
 
+
+
+			
 			coordArray[index]=subCoordArray;
      
 	}
@@ -256,7 +272,7 @@ function getcoordinateArraysStats(data)
 }
 
             
- function transform(point) {
+ function transformETRStoWGS84(point) {
 
  			/*
  	        var point = {
@@ -264,6 +280,8 @@ function getcoordinateArraysStats(data)
                 northing: 7218559.1 // Note: coming from X value in kohteet dataset
             };
             */
+            
+
                 //var pointObj = new Proj4js.Point(point[1]], point.northing); //Note the order
                 var pointObj = new Proj4js.Point(point[0], point[1]); //Note the order
                 var source_kohteet = new Proj4js.Proj('EPSG:3133');
@@ -272,7 +290,8 @@ function getcoordinateArraysStats(data)
                 Proj4js.transform(source_kohteet, dest_google, pointObj);
 
 
-                return pointObj;
+                //OBS! the x/y order may cause some mess
+                return [pointObj['y'],pointObj['x']];
 } 
 //handling venuedata
 function handleXML(data)
@@ -358,10 +377,6 @@ function getPostalAreas(data)
 {
 
 		var select = document.getElementById('postalSelect');
-	   
-   
-
-
 
 		var postalAreas=[];
 
@@ -477,7 +492,100 @@ function drawDashBoard(name)
                 }
             }).draw()   
 
-            debugger;      
+                  
 
 }
 
+//calculates if the point is within the polygon
+function isPointInPoly(poly, pt){
+
+		/*
+	 polygone=   [
+                        [-73.89632720118, 40.8515320489962],
+                        [-73.8964878416508, 40.8512476593594],
+                        [-73.8968799791431, 40.851375925454],
+                        [-73.8967188588015, 40.851660158514],
+                        [-73.89632720118, 40.8515320489962]
+                    ]
+		*/
+        for(var c = false, i = -1, l = poly.length, j = l - 1; ++i < l; j = i)
+            ((poly[i][1] <= pt[1] && pt[1] < poly[j][1]) || (poly[j][1] <= pt[1] && pt[1] < poly[i].y))
+            && (pt[0] < (poly[j][0] - poly[i][0]) * (pt[1] - poly[i][1]) / (poly[j][1] - poly[i][1]) + poly[i][0])
+            && (c = !c);
+
+            
+        return c;
+}
+
+//calculates the district point resides in
+function pointInDistrict(){
+
+	var districtName='';
+
+
+		var point=[64.911998, 25.507342];
+
+		//loop trough
+		for (var key in coordArray)
+		{
+
+		    	//check if point is in the polygon 
+		    	if(isPointInPoly( coordArray[key],point))
+		    	{
+		    		console.log("Match "+statData[key][2]);
+		    		districtName=statData[key][2];
+		    	}
+		    	//helpoer
+		    	if(key==1){
+		    		
+		    	console.log(coordArray[key]);
+		    	
+		    	}
+
+
+		}
+
+		
+	return districtName
+}
+
+function testBoundaries()
+{
+
+
+}
+
+function initializeMap() {
+  var mapOptions = {
+    zoom: 5,
+    center: new google.maps.LatLng(24.886436490787712, -70.2685546875),
+    mapTypeId: google.maps.MapTypeId.TERRAIN
+  };
+
+    var bermudaTriangle;
+
+  var map = new google.maps.Map(document.getElementById('map-canvas'),
+      mapOptions);
+
+  // Define the LatLng coordinates for the polygon's path.
+  var triangleCoords = [
+    new google.maps.LatLng(25.774252, -80.190262),
+    new google.maps.LatLng(18.466465, -66.118292),
+    new google.maps.LatLng(32.321384, -64.75737),
+    new google.maps.LatLng(25.774252, -80.190262)
+  ];
+
+  // Construct the polygon.
+  bermudaTriangle = new google.maps.Polygon({
+    paths: triangleCoords,
+    strokeColor: '#FF0000',
+    strokeOpacity: 0.8,
+    strokeWeight: 2,
+    fillColor: '#FF0000',
+    fillOpacity: 0.35
+  });
+
+debugger;
+
+  bermudaTriangle.setMap(map);
+}
