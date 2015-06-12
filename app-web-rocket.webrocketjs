@@ -1,70 +1,248 @@
-var WebRocketApplication = IApplication.$extend(
+// Changes XML to JSON
+
+var concatChar = ';';
+var statData;
+var coordArray;
+
+function readStats()
+{
+	var transfer = Tundra.asset.requestAsset("http://localhost:8082/data/pno_tilasto_2015_evesav.csv", "Text");
+	transfer.onCompleted(this, function(asset)
+	{
+		statData=generateArraysStats(asset.data);
+		console.log("done parsing");
+		coordArray=getcoordinateArraysStats(statData);
+		console.log("done extracting coordinates")
+
+	});
+	transfer.onFailed(this, function(transfer, reason, metadata)
+	{
+		console.log("Failed", transfer, reason, metadata);
+	})
+	return coordArray;
+}
+
+function getcoordinateArraysStats(data)
 {
 
-	parse_coord: function(str)
-	{
-		var coordArray = str.split(' ');
-		var lat = parseFloat(coordArray[1]);
-		var lon = parseFloat(coordArray[0]);
-		
-		var coord = {};
-		if (!isNaN(lat))
-			coord.lat = lat;
-		if (!isNaN(lon))
-			coord.lon = lon;
-		
-		return coord;
-	},
+	var coordArray=[];
 	
-	xmlToJson : function(xml) 
-	{
-	
-		// Create the return object
-		var obj = {};
 
-		if (xml.nodeType == 1) { // element
-			// do attributes
-			if (xml.attributes.length > 0) {
-			obj["@attributes"] = {};
-				for (var j = 0; j < xml.attributes.length; j++) {
-					var attribute = xml.attributes.item(j);
-					obj["@attributes"][attribute.nodeName] = attribute.nodeValue;
+	for (index = 0; index < data.length; ++index) 
+	{
+
+
+		var subArray=data[index];
+
+			var subCoordArray=[];
+
+			for (i = 0; i < subArray.length; ++i) 
+			{
+
+				if(i>=113)
+				{
+					//split easting and northing...
+					var converted=subArray[i].replace(/[|&;$%@"<>()+]/g, "").split(' ')
+						
+						//send to transform function and add to coordArray
+						subCoordArray.push(transformETRStoWGS84(converted) );
+	
 				}
+			
 			}
-		} else if (xml.nodeType == 3) { // text
-			obj = xml.nodeValue;
+	
+			coordArray[index]=subCoordArray;
+     
+	}
+
+	console.log('coordArrays done');
+
+	return coordArray;
+
+}
+
+ function transformETRStoWGS84(point) {
+    Proj4js.defs["EPSG:3067"] = "+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs";
+	Proj4js.defs["EPSG:4326"] = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs";
+
+    var pointObj = new Proj4js.Point(point[0], point[1]); //Note the order
+    var source_kohteet = new Proj4js.Proj('EPSG:3067');
+    var dest_google = new Proj4js.Proj('EPSG:4326'); //dest_WGS84
+    Proj4js.transform(source_kohteet, dest_google, pointObj);
+
+    return [pointObj['y'],pointObj['x']];
+} 
+
+
+function generateArraysStats(data)
+{
+
+	console.log('generating arrays');
+	var finalArray=[];
+	var tempArray=[];
+	var lines = data.split('\n');
+
+	for(var i = 0;i < lines.length;i++)
+	{
+
+		var firstPartofLine=[];
+		var coordinates=[];
+
+	    //code here using lines[i] which will give you each line
+		var line=lines[i].split('MULTIPOLYGON ');
+
+		for(var j = 0; j < line.length;j++)
+		{
+			//code here using lines[i] which will give you each line
+			//if basic data
+			if(j==0)
+			{
+				//console.log('data');
+				//console.log(line[i]);
+				firstPartofLine=line[j].split(',');
+				//console.log(firstPartofLine);
+			}
+			//else if polygon aka 
+			else
+			{
+				//console.log('coords');
+				//console.log(line[i]);
+				
+				coordinates=line[j].replace(/[|&;$%@"<>()+]/g, "").split(', ');
+
+				//console.log(coordinates);
+			}
+
 		}
 
-		// do children
-		if (xml.hasChildNodes()) {
-			for(var i = 0; i < xml.childNodes.length; i++) {
-				var item = xml.childNodes.item(i);
-				var nodeName = item.nodeName;
-				if (typeof(obj[nodeName]) == "undefined") {
-					obj[nodeName] = this.xmlToJson(item);
-				} else {
-					if (typeof(obj[nodeName].push) == "undefined") {
-						var old = obj[nodeName];
-						obj[nodeName] = [];
-						obj[nodeName].push(old);
-					}
-					obj[nodeName].push(this.xmlToJson(item));
-				}
-			}
+		tempArray=firstPartofLine.concat(coordinates);
+		//console.log(tempArray);
+		if(tempArray.length > 1){
+			finalArray.push(tempArray);
 		}
-		return obj;
-	},
-	data : [],
 
+		
+	}
+
+	console.log('finalArray done');
+
+	return finalArray;
+
+}
+
+function xmlToJson(xml) 
+{
+    
+    // Create the return object
+    var obj = {};
+
+    if (xml.nodeType == 1) { // element
+        // do attributes
+        if (xml.attributes.length > 0) {
+        obj["@attributes"] = {};
+            for (var j = 0; j < xml.attributes.length; j++) {
+                var attribute = xml.attributes.item(j);
+                obj["@attributes"][attribute.nodeName] = attribute.nodeValue;
+            }
+        }
+    } else if (xml.nodeType == 3) { // text
+        obj = xml.nodeValue;
+    }
+
+    // do children
+    if (xml.hasChildNodes()) {
+        for(var i = 0; i < xml.childNodes.length; i++) {
+            var item = xml.childNodes.item(i);
+            var nodeName = item.nodeName;
+            if (typeof(obj[nodeName]) == "undefined") {
+                obj[nodeName] = xmlToJson(item);
+            } else {
+                if (typeof(obj[nodeName].push) == "undefined") {
+                    var old = obj[nodeName];
+                    obj[nodeName] = [];
+                    obj[nodeName].push(old);
+                }
+                obj[nodeName].push(xmlToJson(item));
+            }
+        }
+    }
+    return obj;
+};
+
+function drawBoundary(coordinates)
+{
+
+	if ( coordinates == null) {
+		console.log("coordinates are not given");
+		coordinates = [ {lat: 65.015709, lon: 25.470789}, {lat: 65.016709,lon: 25.470089}, {lat: 65.017709,lon: 25.471789}, {lat: 65.016709,lon: 25.472789}, {lat: 65.015709, lon: 25.470789} ];
+	}
+	// Remove the previous route
+	//Tundra.renderer.scene.remove( this.highlighted_route );
+	
+	var line_material = new THREE.LineBasicMaterial({
+		color: 0xFF0000,
+		linewidth: 100
+		});
+		
+	var line_geometry = new THREE.Geometry();
+
+	for (var i = 0; i < coordinates.length; i++) {
+		for (var j = 0; j < coordinates[i].length; j++) {
+			var lat = coordinates[i][j][0];
+			var lon = coordinates[i][j][1];
+			var pos = Tundra.plugins.meshmoonGeo.coordinates.latLonToWorldPosition(lat, lon);
+			// height of the line from the ground
+			pos.y = 25;
+			line_geometry.vertices.push(pos);
+		}
+	}
+	var line = new THREE.Line( line_geometry, line_material );
+	this.highlighted_route = line;
+	Tundra.renderer.scene.add( this.highlighted_route );
+}
+
+function getCoordinate()
+{
+    var r = Tundra.renderer.raycast(undefined, undefined, 0, undefined, true);
+		//console.log("vec_cor:", r.pos);
+	console.log("vec_cor", r.pos);
+	var cor_array = Tundra.plugins.meshmoonGeo.coordinates.worldPositionToLatLon(r.pos.x, r.pos.y);
+	//console.log(cor_array.lat, cor_array.lon);
+	return cor_array
+}
+
+var WebRocketApplication = IApplication.$extend(
+{
+	//debugger;
     __init__ : function()
     {
         this.$super("Meshmoon GEO");
 
+        this.data = {};
+        
+        this.kohteet_data = {};
+        this.billboards = [];
+        this.lastHoveredBillboard = 0;
+        
+        this.kohteet_category_label = {};
+        
+        this.kohteet_category_hierarcy = {};
+        
         this.timing = new AsyncHelper(this.name, this);
         this.state =
         {
             camera : {}
         };
+
+		$.getScript( "http://svn.osgeo.org/metacrs/proj4js/branches/proj4js-1.0/lib/proj4js-combined.js" )
+			.done(function( script, textStatus ) {
+				console.log("Proj4js.js included" );
+				coordArray = readStats();
+				
+			})
+			.fail(function( jqxhr, settings, exception ) {
+			console.log("++++++++++++++++++++++++++FAILED");	
+		});
 
         // Monitor active camera change
         var activeCamera = Tundra.renderer.activeCameraEntity();
@@ -91,72 +269,234 @@ var WebRocketApplication = IApplication.$extend(
             lon : 25.466228,
             lat : 65.013439
         });
-		
-		// Get the camera XML file and assign callback function 
-		var transfer = Tundra.asset.requestAsset('http://www.oulunliikenne.fi/rss/weather_camera/camera.xml');
-		transfer.onCompleted(this, this.onAssetTransferCompleted);
-		
-		this.subscribeEvent(Tundra.input.onMousePress(this, this.onMousePress));
 
         // Setup default environment
         Tundra.plugins.meshmoonGeo.setupEnvironment();
-		
-		
-    },
-	
-	onAssetTransferCompleted : function(asset)
+
+        this.imageElement = $("<img/>");
+        this.imageElement.css({
+            "position" : "absolute",
+            "top" : 25,
+            "left" : 25
+        })
+        
+        var _that = this;
+        $.getScript( "http://svn.osgeo.org/metacrs/proj4js/branches/proj4js-1.0/lib/proj4js-combined.js" )
+            .done(function( script, textStatus ) {
+                var transfer_kohteet = Tundra.asset.requestAsset("http://kartta.ouka.fi/web/siirto/kohteet.xml");
+                transfer_kohteet.onCompleted(_that, _that.onKohteetAssetTransferCompleted);
+                
+            })
+            .fail(function( jqxhr, settings, exception ) {
+        });
+        
+        this.framework.ui.addWidgetToScene([this.imageElement]);
+
+        this.subscribeEvent(Tundra.input.onMousePress(this, this.onMousePress));
+        this.subscribeEvent(Tundra.input.onMouseMove(this, this.onMouseMove));
+
+		IApplication.loadDependencies(this,
+            "button1.html"
+        ).done(this.initPolymer.bind(this));
+	},
+
+	initPolymer: function()
 	{
-		var obj = this.xmlToJson(asset.data);
-        //console.log(obj);
- 
-        if (obj.rss && obj.rss.channel && obj.rss.channel.item && typeof obj.rss.channel.item == "object")
+		var element = document.createElement("alpha-element");
+		Tundra.ui.add(element);
+		element.name = "information 1";
+		element.position = "ioformation 2";
+		element.time = "information 3";
+    },
+    
+    onKohteetAssetTransferCompleted: function(asset)
+    {
+        var obj = xmlToJson(asset.data);
+        
+        console.log(obj);
+        
+        if(obj.teklaXcitySearchConfiguration && obj.teklaXcitySearchConfiguration.categoryDefaults
+            && obj.teklaXcitySearchConfiguration.categoryDefaults.CategoryLabel
+            && typeof obj.teklaXcitySearchConfiguration.categoryDefaults.CategoryLabel == "object")
         {
-            var items = obj.rss.channel.item;
+            var items = obj.teklaXcitySearchConfiguration.categoryDefaults.CategoryLabel;
             for (var i = 0; i < items.length; i++)
             {
                 var oneItem = items[i];
-                if (typeof oneItem["georss:point"] != "object")
-                    continue;
- 
-                this.data[i] = {
-                    title : oneItem.title["#text"],
-                    link  : oneItem.link["#text"]
+                
+                var _nameEntry = [];
+                
+                for (var j = 0; j < oneItem["NameEntry"].length; j++)
+                {
+                    _nameEntry.push(oneItem["NameEntry"][j]["#text"]);
+                }
+                
+                this.kohteet_category_label[i] = {
+                    category_label : oneItem["@attributes"]["Name"],
+                    nameEntry : _nameEntry
                 };
- 
-                var coord = this.parse_coord(oneItem["georss:point"]["#text"]);
- 
- 
-                var pos = Tundra.plugins.meshmoonGeo.coordinates.latLonToWorldPosition(coord.lat, coord.lon);
- 
-                var entity = Tundra.scene.createLocalEntity(["Name", "Mesh", "Placeable"]);
- 
-                entity.name = "ent_"+i;
- 
-                entity.mesh.meshRef = "http://meshmoon.eu.scenes.1.s3.amazonaws.com/ligas-401829/test-layer/sphere/sphere.mesh";
-                entity.mesh.materialRefs = [
-                    "http://meshmoon.eu.scenes.1.s3.amazonaws.com/ligas-401829/test-layer/sphere/sphere_yellow.material"
-                    ];
- 
-                entity.placeable.setPosition(new THREE.Vector3(pos.x, 150, pos.z));
-                entity.placeable.setScale(new THREE.Vector3(100, 100, 100));
             }
-			//console.log(obj)
         }
-	},
-	
-    onMousePress: function(event)
-    {
-        alert("Hello");
-        var r = Tundra.renderer.raycast();
-        if (r.entity && this.data[r.entity.id])
+            
+        console.log(this.kohteet_category_label);
+        
+        //Add the category hierarchy info
+        if(obj.teklaXcitySearchConfiguration && obj.teklaXcitySearchConfiguration.categoryHierarcy
+            && obj.teklaXcitySearchConfiguration.categoryHierarcy.Category)
         {
-            console.log(this.data[r.entity.id].title);
+            var items = obj.teklaXcitySearchConfiguration.categoryHierarcy.Category;
+            for (var i = 0; i < items.length; i++)
+            {
+                var oneItem = items[i];
+                var _children_category = [];
+                
+                for(var j = 0; j < oneItem["Category"].length; j++)
+                {
+                    _children_category.push(oneItem["Category"][j]["@attributes"]["Name"]);
+                }
+                
+                this.kohteet_category_hierarcy[i] = {
+                    parent_category : oneItem["@attributes"]["Name"],
+                    children_category : _children_category
+                }
+            }
+        }
+                
+        console.log(this.kohteet_category_hierarcy);
+        
+        //Care of the backslash                           
+        var EXCEPTION_IMAGE_URL = "\\\\oukasrv475\\Oulu_kuvat\\viralliset_asemakaavat\\http_//kartta.ouka.fi/system_bmp/OP_moottoriurheilu.gif";
+        var ONLINE_PNG_ADDRESS = "http://tundra-blueshift.s3.amazonaws.com/koste/jilin_png/";
+        if(obj.teklaXcitySearchConfiguration && obj.teklaXcitySearchConfiguration.searchObjects 
+            && obj.teklaXcitySearchConfiguration.searchObjects.Object
+            && typeof obj.teklaXcitySearchConfiguration.searchObjects.Object == "object")
+        {
+            var items = obj.teklaXcitySearchConfiguration.searchObjects.Object;
+            var image_list = {};
+            for (var i = 0; i < items.length; i++)
+            {
+                var oneItem = items[i];
+                if(typeof oneItem["Geometry"] != "object" || typeof oneItem["Category"] != "object"
+                    || typeof oneItem["Explanation"] != "object" || typeof oneItem["Id"] != "object"
+                    || typeof oneItem["Image"] != "object" || typeof oneItem["MunicipalityCode"] != "object"
+                    || typeof oneItem["Name"] != "object" || typeof oneItem["Url"] != "object")
+                    continue;
+                
+                //X for northing, Y for easting
+                var coord = parseKohteetCoord(oneItem["Geometry"]["X"]["#text"], oneItem["Geometry"]["Y"]["#text"]);
+                
+                //transform coordinates from dest_google to local Meshmoon coordinates
+                var pos = Tundra.plugins.meshmoonGeo.coordinates.latLonToWorldPosition(coord.lat, coord.lon);
+                
+                var entity = Tundra.scene.createLocalEntity(["Name", "Billboard", "Placeable"]);
+                
+                entity.name = "ent_"+i;
 
-            this.imageElement.attr("src", this.data[r.entity.id].link);
-            //this.imageElement.show();
+                if(!image_list.hasOwnProperty(oneItem.Image["#text"]))
+                    image_list[oneItem.Image["#text"]] = 1;
+                else{
+                    image_list[oneItem.Image["#text"]] += 1;
+                }
+                
+                var png_image_url = null;
+                //Check exception image url
+                //Remember to lower case the image url after http://.../OP_, even OP_ can be op_
+                if (oneItem.Image["#text"].indexOf(EXCEPTION_IMAGE_URL) == 0)
+                {
+                    png_image_url = ONLINE_PNG_ADDRESS + "OP_moottoriurheilu.png";
+                }
+                else
+                    png_image_url = ONLINE_PNG_ADDRESS
+                                    + "OP_" 
+                                    + oneItem.Image["#text"].toLowerCase().split("http://kartta.ouka.fi/system_bmp/op_")[1].split(".gif")[0].toLowerCase() + ".png";
+                //Cases issues
+                if (png_image_url.indexOf("http://tundra-blueshift.s3.amazonaws.com/koste/jilin_png/OP_hotelli.png") == 0)
+                    png_image_url = "http://tundra-blueshift.s3.amazonaws.com/koste/jilin_png/OP_Hotelli.png";
+                if (png_image_url.indexOf("http://tundra-blueshift.s3.amazonaws.com/koste/jilin_png/OP_panoulu_ulko.png") == 0)
+                    png_image_url = "http://tundra-blueshift.s3.amazonaws.com/koste/jilin_png/OP_panOulu_ulko.png";
+                if (png_image_url.indexOf("http://tundra-blueshift.s3.amazonaws.com/koste/jilin_png/OP_panoulu_sisa.png") == 0)
+                    png_image_url = "http://tundra-blueshift.s3.amazonaws.com/koste/jilin_png/OP_panOulu_sisa.png";
+                                
+                entity.billboard.materialRef = png_image_url;
+                entity.billboard.position = new THREE.Vector3(0,5,0);
+                entity.billboard.height = 21;
+                entity.billboard.width = 21;
+                this.billboards.push(entity.billboard.sprite);
+
+                entity.placeable.setPosition(new THREE.Vector3(pos.x, 25, pos.z));
+                entity.placeable.setScale(new THREE.Vector3(1, 1, 1));
+                                
+                this.kohteet_data[entity.id] = {
+                    category : oneItem.Category["#text"],
+                    description  : oneItem.Explanation["#text"],
+                    entId : entity.id,
+                    Id : oneItem.Id["#text"],
+                    municipalityCode : oneItem.MunicipalityCode["#text"],
+                    name : oneItem.Name["#text"],
+                    url : oneItem.Url["#text"],
+                    coord : coord,
+                    image_url : oneItem.Image["#text"]
+                };
+
+                
+            }
+            // var entity = Tundra.scene.entityByName("ent_0");
+            // entity.billboard.width = 210;
+            // entity.billboard.height = 210;
+            // entity.billboard.onHoverIn = this.onHoverInHandle.bind(this.kohteet_data[entity.id]);
+            // entity.billboard.onHoverOut = this.onHoverOutHandle.bind(this.kohteet_data[entity.id]);
+            console.log(this.kohteet_data);
+        }
+    },
+
+    onMouseMove : function(event)
+    {
+        var r = Tundra.renderer.raycast(undefined, undefined, 0, this.billboards, false);
+
+        if (r.entity && this.kohteet_data[r.entity.id])
+        {
+            if (this.lastHoveredBillboard != r.entity.id)
+            {
+                this.lastHoveredBillboard = r.entity.id;
+                this.hoveredIn();
+            }
         }
         else
-            this.imageElement.hide();
+        {
+            if (this.lastHoveredBillboard > 0)
+            {
+                this.lastHoveredBillboard = 0;
+                this.hoveredOut();
+            }
+        }
+		element.name = "information 1";
+		element.position = "ioformation 2";
+		element.time = "information 3";
+    },
+
+    onMousePress: function(event)
+    {
+        var r = Tundra.renderer.raycast(undefined, undefined, 0, this.billboards, false);
+
+        if (r.entity && this.kohteet_data[r.entity.id])
+        {
+            console.log(this.kohteet_data[r.entity.id].coord);
+            console.log(this.kohteet_data[r.entity.id].category);
+            console.log(this.kohteet_data[r.entity.id].name);
+            console.log(this.kohteet_data[r.entity.id].description);
+            console.log(this.kohteet_data[r.entity.id].url);
+        }
+            
+    },
+
+    hoveredIn : function()
+    {
+        console.log("Hovered in", this.lastHoveredBillboard);
+    },
+
+    hoveredOut : function()
+    {
+        console.log("Hovered out");
     },
 
     onActiveCameraChanged : function(activeCameraComponent, prevCameraComponent)
@@ -169,7 +509,7 @@ var WebRocketApplication = IApplication.$extend(
         this.camera = activeCameraComponent.parentEntity;
         this.camera.camera.farPlane = 1000000;
 
-        //this.log.debug("Active camera changed", this.camera.name);
+        this.log.debug("Active camera changed", this.camera.name);
 
         // If RTS camera execute configuration
         if (this.camera.name === "MeshmoonRtsCamera" && this.state.camera.configured === undefined)
@@ -196,3 +536,4 @@ var WebRocketApplication = IApplication.$extend(
 
 // Start the application by instantiating it
 var webRocketApplication = new WebRocketApplication();
+window.myApp = webRocketApplication;
