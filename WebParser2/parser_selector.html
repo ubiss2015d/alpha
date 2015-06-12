@@ -1,0 +1,59 @@
+
+<html>
+
+<head>
+<meta charset="UTF-8"></meta>
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <title>Tester</title>
+
+    <script type="text/javascript" src="jquery-1.11.3.min.js"></script>
+	<script type="text/javascript" src="parser_selector.js"></script>
+	<script src="proj4js-combined.js"></script>
+    <script src="defs/EPSG3067.js"></script>
+    <script src="defs/EPSG900913.js"></script>
+        
+    <script src="defs/EPSG4326.js"></script>
+        
+    <script src="defs/EPSG3857.js"></script>
+    <script src="defs/EPSG3880.js"></script>
+
+    <script src="defs/EPSG3133.js"></script>
+
+
+    <script type="text/javascript" src="RGraph4/libraries/RGraph.common.core.js" ></script>
+    <script type="text/javascript" src="RGraph4/libraries/RGraph.bar.js" ></script>
+    <script type="text/javascript" src="RGraph4/libraries/RGraph.pie.js" ></script>
+
+    <script type="text/javascript" src="RGraph4/libraries/RGraph.common.key.js" ></script>
+    <script type="text/javascript" src="RGraph4/libraries/RGraph.common.dynamic.js" ></script>
+    <script type="text/javascript" src="RGraph4/libraries/RGraph.drawing.rect.js" ></script>
+
+
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&signed_in=true"></script>
+    
+    <style>
+
+    </style>
+</head>
+<body>
+Testing parsing and transformation possibilities
+<BR>
+  <select id="postalSelect" onchange="postalChanged()">
+
+  </select>
+<BR>
+<center><canvas id="cvs" width="300" height="500">[No canvas support]</canvas></center><BR>
+<!-- Div which will hold the Output -->
+
+<center><canvas id="canvas_educ" width="300" height="500">[No canvas support]</canvas></center><BR>
+<center><canvas id="canvas_work" width="300" height="500">[No canvas support]</canvas></center>
+<center><canvas id="canvas_pie" width="300" height="500">[No canvas support]</canvas></center>
+
+<div id="map-canvas" width="400" height="500"></div>
+<div id="test_output">
+
+</div>
+
+
+</body>
+</html>

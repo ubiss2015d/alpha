@@ -1,0 +1,75 @@
+<!DOCTYPE html >
+<html>
+<head>
+    <link rel="stylesheet" href="demos.css" type="text/css" media="screen" />
+    
+    <script type="text/javascript" src="../libraries/RGraph.common.core.js" ></script>
+    <script type="text/javascript" src="../libraries/RGraph.bar.js" ></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <!--[if lt IE 9]><script src="../excanvas/excanvas.js"></script><![endif]-->
+    
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="description" content="A Bar chart that is using the sketch variant" />
+     
+</head>
+<body>
+
+    <div style="text-align: center; font-family: Comic sans MS; width: 800px">
+        <h1>Fruit consumed at the luncheon</h1>
+    
+        <canvas id="cvs" width="800" height="250">[No canvas support]</canvas>
+    
+        <script>
+            $(document).ready(function ()
+            {
+                var bar = new RGraph.Bar({
+                    id: 'cvs',
+                    data: [248,243,180,160,120,43],
+                    options: {
+                        colors: ['black'],
+                        labels: {
+                            above: {
+                                self: true,
+                                specific: ['Apples', 'Oranges', 'Kiwi', 'Grapes', 'Mango', 'Kum-quat'],
+                                size: 12
+                            }
+                        },
+                        gutter: {
+                            top: 50,
+                            left: 150,
+                            bottom: 25
+                        },
+                        variant: {
+                            self: 'sketch',
+                            sketch: {
+                                verticals: true
+                            }
+                        },
+                        
+                        ylabels: {
+                            specific: ['Lots', 'Not so much']
+                        },
+                        text: {
+                            font: 'Comic sans MS',
+                            size: 18
+                        },
+                        background: {
+                            grid: false
+                        }
+                    }
+                }).draw()
+            })
+        </script>
+    </div>
+
+    <p>
+        <a href="https://www.facebook.com/sharer/sharer.php?u=http://www.rgraph.net" target="_blank" onclick="window.open('https://www.facebook.com/sharer/sharer.php?u=http://www.rgraph.net', null, 'top=50,left=50,width=600,height=368'); return false"><img src="../images/facebook-large.png" width="200" height="43" alt="Share on Facebook" border="0" title="Visit the RGraph Facebook page" /></a>
+        <a href="https://twitter.com/_rgraph" target="_blank" onclick="window.open('https://twitter.com/_rgraph', null, 'top=50,left=50,width=700,height=400'); return false"><img src="../images/twitter-large.png" width="200" height="43" alt="Share on Twitter" border="0" title="Mention RGraph on Twitter" /></a>
+    </p>
+
+    <p>
+        <a href="./">&laquo; Back</a>
+    </p>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html >
+<html>
+<head>
+    <link rel="stylesheet" href="demos.css" type="text/css" media="screen" />
+
+    <script src="../libraries/RGraph.common.core.js" ></script>
+    <script src="../libraries/RGraph.bar.js" ></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <!--[if lt IE 9]><script src="../excanvas/excanvas.js"></script><![endif]-->
+    
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="description" content="A stacked bar chart that is showing the chart.labels.above option" />
+     
+</head>
+<body>
+
+    <h1>A stacked Bar chart with chart.labels.above</h1>
+    
+    <canvas id="cvs" width="600" height="250"></canvas>
+        <script>
+            $(document).ready(function ()
+            {
+                var bar = new RGraph.Bar({
+                    id: 'cvs',
+                    data: [[10,12,13],[45,43,26],[42,21,52],[4,3,5]],
+                    options: {
+                        labels: {
+                            self: ['January','February','March','April'],
+                            above: true
+                        },
+                        hmargin: {
+                            self: 20,
+                            grouped: 2
+                        },
+                        highlight: {
+                            fill: 'red'
+                        },
+                        grouping: 'stacked'
+                    }
+                }).draw();
+            })
+        </script>
+        
+        <br />
+
+    <p>
+        <a href="https://www.facebook.com/sharer/sharer.php?u=http://www.rgraph.net" target="_blank" onclick="window.open('https://www.facebook.com/sharer/sharer.php?u=http://www.rgraph.net', null, 'top=50,left=50,width=600,height=368'); return false"><img src="../images/facebook-large.png" width="200" height="43" alt="Share on Facebook" border="0" title="Visit the RGraph Facebook page" /></a>
+        <a href="https://twitter.com/_rgraph" target="_blank" onclick="window.open('https://twitter.com/_rgraph', null, 'top=50,left=50,width=700,height=400'); return false"><img src="../images/twitter-large.png" width="200" height="43" alt="Share on Twitter" border="0" title="Mention RGraph on Twitter" /></a>
+    </p>
+
+</body>
+</html>

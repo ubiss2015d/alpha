@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Simple Polygon</title>
+    <style>
+      html, body, #map-canvas {
+        height: 100%;
+        margin: 0px;
+        padding: 0px
+      }
+    </style>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&signed_in=true"></script>
+    <script type="text/javascript" src="jquery-1.11.3.min.js"></script>
+      <script src="proj4js-combined.js"></script>
+    <script src="defs/EPSG3067.js"></script>
+    <script src="defs/EPSG900913.js"></script>
+        
+    <script src="defs/EPSG4326.js"></script>
+        
+    <script src="defs/EPSG3857.js"></script>
+    <script src="defs/EPSG3880.js"></script>
+
+    <script src="defs/EPSG3133.js"></script>
+    <script>
+// This example creates a simple polygon representing the Bermuda Triangle.
+
+var statData;
+var coordArray;
+
+function initialize() {
+
+readStats();
+
+
+}
+
+function initMap()
+{
+
+    var mapOptions = {
+    zoom: 7,
+    center: new google.maps.LatLng(64.92484469505263,24.474245466685034),
+    mapTypeId: google.maps.MapTypeId.TERRAIN
+  };
+
+  var bermudaTriangle;
+
+  var map = new google.maps.Map(document.getElementById('map-canvas'),
+      mapOptions);
+
+
+
+    var point=[65.0160019,24.7607911];
+
+
+var triangleCoords = [];
+
+    //loop trough
+    for (var key in coordArray)
+    {
+
+      var node=coordArray[key];
+      var subArray=[];
+      for (var item in node)
+      {
+
+        var fragment=node[item];
+
+        //if(key==1){
+             subArray.push( new google.maps.LatLng(node[item][1], node[item][0]));
+         //}
+          
+      }
+
+      triangleCoords.push( subArray);
+
+
+
+/*
+          //check if point is in the polygon 
+          if(isPointInPoly( coordArray[key],point))
+          {
+            console.log("Match "+statData[key][2]);
+            districtName=statData[key][2];
+          }
+          //helpoer
+          if(key==1){
+            
+          console.log(coordArray[key]);
+          
+          }
+*/
+
+    }
+
+    
+/*
+  // Define the LatLng coordinates for the polygon's path.
+  var triangleCoords = [
+    new google.maps.LatLng(25.774252, -80.190262),
+    new google.maps.LatLng(18.466465, -66.118292),
+    new google.maps.LatLng(32.321384, -64.75737),
+    new google.maps.LatLng(25.774252, -80.190262)
+  ];
+*/
+
+  var marker = new google.maps.Marker({
+      position: new google.maps.LatLng(65.0160019,24.7607911),
+      map: map,
+      title: 'Hello World!'
+  });
+
+      for (var item in triangleCoords)
+      {
+
+
+        debugger;
+
+        if(item>0){
+        // Construct the polygon.
+        bermudaTriangle = new google.maps.Polygon({
+          paths: triangleCoords[item],
+          strokeColor: '#FF0000',
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: '#FF0000',
+          fillOpacity: 0.35
+        });
+
+        bermudaTriangle.setMap(map);
+
+
+        }
+      }
+
+}
+
+
+//reading postal area stats from pno_tilasto_2015_evesav.csv
+function readStats()
+{
+
+  $.ajax({
+    url: 'getStatData.php',
+    type: 'GET',
+    cache: false,
+    success: function(response) {
+
+      console.log('parsing readStats ajax reply');
+      
+      //translate csv to js array object
+      statData=generateArraysStats(response);
+
+      //get coordinates and transform them to WGS84
+      
+      coordArray=getcoordinateArraysStats(statData);
+      //var obj = JSON.parse(response);
+
+      initMap();
+
+      /*
+        $.each(response, function(key,val){
+          // do something with key and val
+          document.getElementById('test_output').innerHTML = val;
+          
+          });
+      */
+
+
+      console.log('ajax vreadStats call out');
+      return statData;
+    }
+    ,
+    error: function(jqXHR, exception) {
+      if (jqXHR.status === 0) {
+        alert('handleData: Not connect.\n Verify Network.');
+      } else if (jqXHR.status == 404) {
+        alert('handleData:Requested page not found. [404]');
+      } else if (jqXHR.status == 500) {
+        alert('handleData:Internal Server Error [500].');
+      } else if (exception === 'parsererror') {
+        alert('handleData:Requested JSON parse failed.');
+      } else if (exception === 'timeout') {
+        alert('handleData:Time out error.');
+      } else if (exception === 'abort') {
+        alert('handleData:Ajax request aborted.');
+      } else {
+        alert('handleData:Uncaught Error.\n' + jqXHR.responseText);
+      }
+
+      return 'none';
+    
+    }
+
+});
+}
+
+
+//for pno_tilasto_2015_evesav.csv
+function generateArraysStats(data)
+{
+
+console.log('generating arrays');
+var finalArray=[];
+var tempArray=[];
+var lines = data.split('\n');
+
+  for(var i = 0;i < lines.length;i++)
+  {
+
+    var firstPartofLine=[];
+    var coordinates=[];
+
+      //code here using lines[i] which will give you each line
+    var line=lines[i].split('MULTIPOLYGON ');
+
+    for(var j = 0; j < line.length;j++)
+    {
+      //code here using lines[i] which will give you each line
+      //if basic data
+      if(j==0)
+      {
+        //console.log('data');
+        //console.log(line[i]);
+        firstPartofLine=line[j].split(',');
+        //console.log(firstPartofLine);
+      }
+      //else if polygon aka 
+      else
+      {
+        //console.log('coords');
+        //console.log(line[i]);
+        
+        coordinates=line[j].replace(/[|&;$%@"<>()+]/g, "").split(', ');
+
+        //console.log(coordinates);
+      }
+
+      
+
+    }
+
+    tempArray=firstPartofLine.concat(coordinates);
+    //console.log(tempArray);
+    if(tempArray.length > 1){
+      finalArray.push(tempArray);
+    }
+
+    
+  }
+
+  console.log('finalArray done');
+  //console.log(finalArray);
+
+  return finalArray;
+
+}
+//for pno_tilasto_2015_evesav.csv
+function getcoordinateArraysStats(data)
+{
+
+  var coordArray=[];
+  
+
+  for (index = 0; index < data.length; ++index) 
+  {
+
+
+    var subArray=data[index];
+
+      var subCoordArray=[];
+
+      for (i = 0; i < subArray.length; ++i) 
+      {
+        //coord
+
+        if(i>=113)
+        {
+          //split easting and northing...
+          var converted=subArray[i].replace(/[|&;$%@"<>()+]/g, "").split(' ')
+            
+            //send to transform function and add to coordArray
+            subCoordArray.push(transformETRStoWGS84(converted) );
+  
+        }
+
+        
+      }
+
+
+
+      
+      coordArray[index]=subCoordArray;
+     
+  }
+  
+
+  console.log('coordArrays done');
+  //console.log(coordArray);
+
+  return coordArray;
+
+}
+
+            
+ function transformETRStoWGS84(point) {
+
+      /*
+          var point = {
+                easting: 474854.8, // Note: coming from Y value in kohteet dataset
+                northing: 7218559.1 // Note: coming from X value in kohteet dataset
+            };
+            */
+            
+
+                //var pointObj = new Proj4js.Point(point[1]], point.northing); //Note the order
+                var pointObj = new Proj4js.Point(point[0], point[1]); //Note the order
+                var source_kohteet = new Proj4js.Proj('EPSG:3067');
+                var dest_google = new Proj4js.Proj('EPSG:4326'); //dest_WGS84
+                //After execution, the pointObj should have x (lon) and y (lat) keys for new coordinates values
+                Proj4js.transform(source_kohteet, dest_google, pointObj);
+
+
+                //OBS! the x/y order may cause some mess
+                return [pointObj['x'],pointObj['y']];
+} 
+google.maps.event.addDomListener(window, 'load', initialize);
+
+    </script>
+  </head>
+  <body>
+    <div id="map-canvas"></div>
+  </body>
+</html>
