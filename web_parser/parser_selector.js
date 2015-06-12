@@ -2,7 +2,8 @@
 
 var concatChar = ';';
 var statData;
-var coordArray;
+var coordArrayAng=[];
+var coordArrayRect=[];
 
 /*********************************************
 Holds actions taken when the page is loaded
@@ -111,20 +112,20 @@ function readStats()
 
 			//get coordinates and transform them to WGS84
 			
-			coordArray=getcoordinateArraysStats(statData);
+			getcoordinateArraysStats(statData);
 			//var obj = JSON.parse(response);
 
 			//draw dashboard
-			drawAgeDivision(statData);
+			//drawAgeDivision(statData);
 
 			//get postal area names from main data
 			getPostalAreas(statData);
 
-			//calculate if point belongs to disrtict
+			//calculate if point belongs to district
 			pointInDistrict();		
 
 			//init map functions for testing purposes
-			initializeMap();
+			//initializeMap();
 
 
 			/*
@@ -228,7 +229,6 @@ var lines = data.split('\n');
 function getcoordinateArraysStats(data)
 {
 
-	var coordArray=[];
 	
 
 	for (index = 0; index < data.length; ++index) 
@@ -237,7 +237,8 @@ function getcoordinateArraysStats(data)
 
 		var subArray=data[index];
 
-			var subCoordArray=[];
+			var subCoordArrayAng=[];
+			var subCoordArrayRect=[];
 
 			for (i = 0; i < subArray.length; ++i) 
 			{
@@ -249,17 +250,20 @@ function getcoordinateArraysStats(data)
 					var converted=subArray[i].replace(/[|&;$%@"<>()+]/g, "").split(' ')
 						
 						//send to transform function and add to coordArray
-						subCoordArray.push(transformETRStoWGS84(converted) );
+						subCoordArrayAng.push(transformETRStoWGS84(converted) );
+						subCoordArrayRect.push([parseInt(converted[0],10),parseInt(converted[1],10) ]);
 	
 				}
 
 				
 			}
 
+	
+			coordArrayAng[index]=subCoordArrayAng;
+			coordArrayRect[index]=subCoordArrayRect;
 
 
 			
-			coordArray[index]=subCoordArray;
      
 	}
 	
@@ -267,7 +271,6 @@ function getcoordinateArraysStats(data)
 	console.log('coordArrays done');
 	//console.log(coordArray);
 
-	return coordArray;
 
 }
 
@@ -284,7 +287,7 @@ function getcoordinateArraysStats(data)
 
                 //var pointObj = new Proj4js.Point(point[1]], point.northing); //Note the order
                 var pointObj = new Proj4js.Point(point[0], point[1]); //Note the order
-                var source_kohteet = new Proj4js.Proj('EPSG:3133');
+                var source_kohteet = new Proj4js.Proj('EPSG:3067');
                 var dest_google = new Proj4js.Proj('EPSG:4326'); //dest_WGS84
                 //After execution, the pointObj should have x (lon) and y (lat) keys for new coordinates values
                 Proj4js.transform(source_kohteet, dest_google, pointObj);
@@ -340,7 +343,7 @@ function drawAgeDivision(data)
 
 			if(key>0){
 		    	//name, 
-		    	values.push([data[key][10], data[key][11]]);
+		    	values.push([parseInt(data[key][10],10), parseInt(data[key][11])]);
 
 		    	labels.push(data[key][2]);
 
@@ -361,7 +364,7 @@ function drawAgeDivision(data)
                     title: 'Ration of male and female in certain areas',
                     variant: '3d',
                     strokestyle: 'transparent',
-                    ymax: 70000,
+                    ymax: Math.max(values),
                     gutter: {
                     left: 60,
                     bottom: 150,
@@ -408,8 +411,15 @@ function postalChanged() {
 
 	console.log($('#postalSelect option:selected').text());
 
-	RGraph.Clear(document.getElementById("canvas_educ"));
-	RGraph.Clear(document.getElementById("canvas_work"));
+
+
+	//empty canvases
+	RGraph.ObjectRegistry.Clear(document.getElementById("canvas_educ"));
+	RGraph.ObjectRegistry.Clear(document.getElementById("canvas_work"));
+	RGraph.ObjectRegistry.Clear(document.getElementById("cvs"));
+	
+
+
 
 	//update board
 	drawDashBoard($('#postalSelect option:selected').text());
@@ -424,27 +434,61 @@ function drawDashBoard(name)
 		var data=statData;
 		var xy=[];
 
+
+				var labels=['Men','Women'];
+		var values=[];
+
+
+
+
 		//"canvas_sex" ="canvas_educ" "canvas_work"
 
-		var labelsEduc=['Elementary','High school','Upper secondary','BS','Ms',];
+		var labelsEduc=['Elementary','High school','Upper secondary','BS','Ms'];
 		var valuesEduc=[];
 
-		var labelsWork=['Population','Work force','Employed','Unemployed','Outside work market',];
+		var labelsWork=['Population','Work force','Employed','Unemployed','Outside work market'];
 		var valuesWork=[];
+
+
 
 		for (var key in data)
 		{
 
 			if(data[key][2]==name){
 		    	//name, 
-		    	valuesEduc.push([data[key][34], data[key][36], data[key][37], data[key][38], data[key][39]]);
+		    	valuesEduc.push([parseInt(data[key][34], 10), parseInt(data[key][36], 10), parseInt(data[key][37], 10), parseInt(data[key][38], 10), parseInt(data[key][39], 10)]);
 
-		    	valuesWork.push([data[key][103], data[key][104], data[key][105], data[key][106], data[key][107]]);
+		    	valuesWork.push([parseInt(data[key][103], 10), parseInt(data[key][104], 10), parseInt(data[key][105], 10), parseInt(data[key][106], 10), parseInt(data[key][107], 10)]);
+		    	
+		    	values.push([parseInt(data[key][10],10), parseInt(data[key][11])]);
 
 		    }
 
 		}
-		
+	
+
+	           var bar1 = new RGraph.Bar({
+                id: 'cvs',
+                data: values,
+                options: {
+                    colors: ['#2A17B1', '#98ED00'],
+                    labels: labels,
+                    text: {
+                        angle: 90
+                    },
+                    title: 'Ration of male and female',
+                    variant: '3d',
+                    strokestyle: 'transparent',
+                    ymax: Math.max(values),
+                    gutter: {
+                    left: 60,
+                    bottom: 150,
+                    top: 30
+                }
+
+                }
+            }).draw()
+
 
 
 	           var bar4 = new RGraph.Bar({
@@ -456,21 +500,24 @@ function drawDashBoard(name)
                     text: {
                         angle: 90
                     },
-                    title: 'Education situation',
+                    title: 'Education',
+                    
                     variant: '3d',
                     strokestyle: 'transparent',
-                    ymax: 25000,
+                    ymax: Math.max(valuesEduc),
                     gutter: {
                     left: 60,
                     bottom: 150,
-                    top: 60
+                    top: 30
                 }
 
                 }
-            }).draw()
+            }).draw();
 
 
-	  	           var bar5 = new RGraph.Bar({
+ 
+
+  	           var bar5 = new RGraph.Bar({
                 id: 'canvas_work',
                 data: valuesWork,
                 options: {
@@ -479,25 +526,28 @@ function drawDashBoard(name)
                     text: {
                         angle: 90
                     },
-                    title: 'Employment situation',
+                    title: 'Employment',
+                    
                     variant: '3d',
                     strokestyle: 'transparent',
-                    ymax: 25000,
+                    ymax: Math.max(valuesWork),
                     gutter: {
                     left: 60,
                     bottom: 150,
-                    top: 60
+                    top: 30
                 }
 
                 }
-            }).draw()   
+            }).draw();
 
-                  
+
+
+           debugger;       
 
 }
 
 //calculates if the point is within the polygon
-function isPointInPoly(poly, pt){
+function isPointInPoly(poly, point){
 
 		/*
 	 polygone=   [
@@ -508,6 +558,10 @@ function isPointInPoly(poly, pt){
                         [-73.89632720118, 40.8515320489962]
                     ]
 		*/
+		//axis swap
+		//var pt = [point[1],point[0]];
+		var pt = point;
+
         for(var c = false, i = -1, l = poly.length, j = l - 1; ++i < l; j = i)
             ((poly[i][1] <= pt[1] && pt[1] < poly[j][1]) || (poly[j][1] <= pt[1] && pt[1] < poly[i].y))
             && (pt[0] < (poly[j][0] - poly[i][0]) * (pt[1] - poly[i][1]) / (poly[j][1] - poly[i][1]) + poly[i][0])
@@ -523,26 +577,33 @@ function pointInDistrict(){
 	var districtName='';
 
 
-		var point=[64.911998, 25.507342];
+		var point=[429468.9141	,7213420.4591
 
+
+];
+
+		var minDist=0;
 		//loop trough
-		for (var key in coordArray)
+		for (var key in coordArrayRect)
 		{
 
 		    	//check if point is in the polygon 
-		    	if(isPointInPoly( coordArray[key],point))
+		    	if(isPointInPoly(coordArrayRect[key],point)==true)
 		    	{
 		    		console.log("Match "+statData[key][2]);
 		    		districtName=statData[key][2];
+
 		    	}
+
+		    	console.log('Mindist from'+statData[key][2]+' is '+calcMinDist(point,coordArrayRect[key]));
 		    	//helpoer
-		    	if(key==1){
+		    	if(key==5){
 		    		
-		    	console.log(coordArray[key]);
+		    	//console.log(statData[key][2]);
 		    	
 		    	}
 
-
+		    	
 		}
 
 		
@@ -555,7 +616,27 @@ function testBoundaries()
 
 }
 
-function initializeMap() {
+function calcMinDist(point, coordArr)
+{
+		var min=1000000000;
+		for (var key in coordArr)
+		{
+			//dist 
+			var dist=Math.sqrt(Math.pow((coordArr[key][0]-point[0]),2)+Math.pow((coordArr[key][1]-point[1]),2));
+			if(dist<min)
+			{
+				min=dist;
+			}
+
+		}
+
+		return min;
+
+}
+
+//google.maps.event.addDomListener(window, 'load', initialize);
+
+function initialize() {
   var mapOptions = {
     zoom: 5,
     center: new google.maps.LatLng(24.886436490787712, -70.2685546875),
@@ -585,7 +666,7 @@ function initializeMap() {
     fillOpacity: 0.35
   });
 
-debugger;
+
 
   bermudaTriangle.setMap(map);
 }
