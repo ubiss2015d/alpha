@@ -3,67 +3,7 @@
 var concatChar = ';';
 var statData;
 var coordArray;
-/*
-function readVenues()
-{
 
-	$.ajax({
-		url: 'getVenueData.php',
-		type: 'GET',
-		cache: false,
-		success: function(response) {
-
-			console.log('parsing readVenues ajax reply');
-			
-			//console.log(response);
-
-			var venuesArray=handleXML(response);
-		
-
-			//translate csv to js array object
-			//var mainArray=generateArrays(response);
-
-			//get coordinates and transform them to WGS84
-			//var coordArray=getcoordinateArrays(mainArray);
-			//var obj = JSON.parse(response);
-
-			
-			/*
-				$.each(response, function(key,val){
-					// do something with key and val
-					document.getElementById('test_output').innerHTML = val;
-					
-					});
-			
-
-			console.log(' readVenues ajax call out');
-			return venuesArray;
-		}
-		,
-		error: function(jqXHR, exception) {
-			if (jqXHR.status === 0) {
-				alert('handleData: Not connect.\n Verify Network.');
-			} else if (jqXHR.status == 404) {
-				alert('handleData:Requested page not found. [404]');
-			} else if (jqXHR.status == 500) {
-				alert('handleData:Internal Server Error [500].');
-			} else if (exception === 'parsererror') {
-				alert('handleData:Requested JSON parse failed.');
-			} else if (exception === 'timeout') {
-				alert('handleData:Time out error.');
-			} else if (exception === 'abort') {
-				alert('handleData:Ajax request aborted.');
-			} else {
-				alert('handleData:Uncaught Error.\n' + jqXHR.responseText);
-			}
-
-			return 'none';
-		
-		}
-
-});
-}
-*/
 function readStats()
 {
 	var transfer = Tundra.asset.requestAsset("http://localhost:8082/data/pno_tilasto_2015_evesav.csv", "Text");
@@ -73,7 +13,7 @@ function readStats()
 		console.log("done parsing");
 		coordArray=getcoordinateArraysStats(statData);
 		console.log("done extracting coordinates")
-		//debugger;
+
 	});
 	transfer.onFailed(this, function(transfer, reason, metadata)
 	{
@@ -98,7 +38,6 @@ function getcoordinateArraysStats(data)
 
 			for (i = 0; i < subArray.length; ++i) 
 			{
-				//coord
 
 				if(i>=113)
 				{
@@ -117,7 +56,6 @@ function getcoordinateArraysStats(data)
 	}
 
 	console.log('coordArrays done');
-	//console.log(coordArray);
 
 	return coordArray;
 
@@ -130,11 +68,8 @@ function getcoordinateArraysStats(data)
     var pointObj = new Proj4js.Point(point[0], point[1]); //Note the order
     var source_kohteet = new Proj4js.Proj('EPSG:3067');
     var dest_google = new Proj4js.Proj('EPSG:4326'); //dest_WGS84
-                //After execution, the pointObj should have x (lon) and y (lat) keys for new coordinates values
     Proj4js.transform(source_kohteet, dest_google, pointObj);
-				
 
-                //OBS! the x/y order may cause some mess
     return [pointObj['y'],pointObj['x']];
 } 
 
@@ -190,7 +125,6 @@ function generateArraysStats(data)
 	}
 
 	console.log('finalArray done');
-	//console.log(finalArray);
 
 	return finalArray;
 
@@ -234,23 +168,6 @@ function xmlToJson(xml)
     }
     return obj;
 };
-
-
-function parseCoord(str)
-{
-    var coordArray = str.split(" ");
-    var coord = {};
-    var lon = parseFloat(coordArray[0]);
-    var lat = parseFloat(coordArray[1]);
-
-    if (!isNaN(lon))
-        coord.lon = lon;
-
-    if (!isNaN(lat))
-        coord.lat = lat;
-
-    return coord;
-}
 
 function drawBoundary(coordinates)
 {
@@ -352,8 +269,6 @@ var WebRocketApplication = IApplication.$extend(
 
         this.subscribeEvent(Tundra.input.onMousePress(this, this.onMousePress));
 
-        var transfer = Tundra.asset.requestAsset("http://www.oulunliikenne.fi/rss/weather_camera/camera.xml");
-        transfer.onCompleted(this, this.onAssetTransferCompleted);
 		
 		IApplication.loadDependencies(this,
             "button1.html"
@@ -370,43 +285,6 @@ var WebRocketApplication = IApplication.$extend(
 		element.time = "information 3";
 	},
 	
-    onAssetTransferCompleted: function(asset)
-    {
-        var obj = xmlToJson(asset.data);
-        //console.log(obj);
-
-        if (obj.rss && obj.rss.channel && obj.rss.channel.item && typeof obj.rss.channel.item == "object")
-        {
-            var items = obj.rss.channel.item;
-            for (var i = 0; i < items.length; i++)
-            {
-                var oneItem = items[i];
-                if (typeof oneItem["georss:point"] != "object")
-                    continue;
-
-                var coord = parseCoord(oneItem["georss:point"]["#text"]);
-                var pos = Tundra.plugins.meshmoonGeo.coordinates.latLonToWorldPosition(coord.lat, coord.lon);
-
-                var entity = Tundra.scene.createLocalEntity(["Name", "Mesh", "Placeable"]);
-/*
-                //entity.name = "ent_"+i;
-
-                //entity.mesh.meshRef = "http://meshmoon.eu.scenes.1.s3.amazonaws.com/ligas-401829/test-layer/sphere/sphere.mesh";
-                //entity.mesh.materialRefs = [
-                    "http://meshmoon.eu.scenes.1.s3.amazonaws.com/ligas-401829/test-layer/sphere/sphere_yellow.material"
-                    ];
-
-                //entity.placeable.setPosition(new THREE.Vector3(pos.x, 150, pos.z));
-                //entity.placeable.setScale(new THREE.Vector3(100, 100, 100));
-
-                this.data[entity.id] = {
-                    title : oneItem.title["#text"],
-                    link  : oneItem.link["#text"],
-                    entId : entity.id
-                };*/
-            }
-        }
-    },
 
     onMousePress: function(event)
     {
