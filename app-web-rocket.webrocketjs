@@ -6,7 +6,7 @@ var coordArray;
 
 function readStats()
 {
-	var transfer = Tundra.asset.requestAsset("http://localhost:8082/data/pno_tilasto_2015_evesav.csv", "Text");
+	var transfer = Tundra.asset.requestAsset("http://localhost:8082/applications/alpha/data/pno_tilasto_2015_evesav.csv", "Text");
 	transfer.onCompleted(this, function(asset)
 	{
 		statData=generateArraysStats(asset.data);
@@ -168,6 +168,42 @@ function xmlToJson(xml)
     }
     return obj;
 };
+
+function transform(point) {
+    Proj4js.defs["EPSG:3133"] = "+proj=tmerc +lat_0=0 +lon_0=26 +k=1 +x_0=500000 +y_0=0 +ellps=GRS80 +units=m +no_defs";
+    Proj4js.defs["EPSG:4326"] = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs";
+    Proj4js.defs["EPSG:3067"] = "+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs";
+    var pointObj = new Proj4js.Point(point.easting, point.northing); //Note the order
+    var source_kohteet = new Proj4js.Proj('EPSG:3133');
+    var dest_google = new Proj4js.Proj('EPSG:4326'); //dest_WGS84
+    //After execution, the pointObj should have x (lon) and y (lat) keys for new coordinates values
+    Proj4js.transform(source_kohteet, dest_google, pointObj);
+    return pointObj;
+};  
+
+function parseKohteetCoord(northing_str, easting_str)
+{
+    var point = {
+        easting : parseFloat(easting_str),
+        northing : parseFloat(northing_str)
+    }
+    
+    //Transform coordinates from source to dest_google
+    var pointObj = transform(point);
+    
+    var coord = {};
+    var lon = pointObj.x;
+    var lat = pointObj.y;
+
+    if (!isNaN(lon))
+        coord.lon = lon;
+
+    if (!isNaN(lat))
+        coord.lat = lat;
+
+    return coord;
+};
+
 
 function drawBoundary(coordinates)
 {
@@ -451,6 +487,7 @@ var WebRocketApplication = IApplication.$extend(
 
     onMouseMove : function(event)
     {
+		
         var r = Tundra.renderer.raycast(undefined, undefined, 0, this.billboards, false);
 
         if (r.entity && this.kohteet_data[r.entity.id])
@@ -469,15 +506,12 @@ var WebRocketApplication = IApplication.$extend(
                 this.hoveredOut();
             }
         }
-		element.name = "information 1";
-		element.position = "ioformation 2";
-		element.time = "information 3";
+
     },
 
     onMousePress: function(event)
     {
         var r = Tundra.renderer.raycast(undefined, undefined, 0, this.billboards, false);
-
         if (r.entity && this.kohteet_data[r.entity.id])
         {
             console.log(this.kohteet_data[r.entity.id].coord);
@@ -485,8 +519,13 @@ var WebRocketApplication = IApplication.$extend(
             console.log(this.kohteet_data[r.entity.id].name);
             console.log(this.kohteet_data[r.entity.id].description);
             console.log(this.kohteet_data[r.entity.id].url);
-        }
-            
+        } 
+
+        console.log("coordinates", coordArray);
+		var cor_array = getCoordinate();
+		console.log(cor_array.lat, cor_array.lon);
+		console.log("length = ", coordArray.length);
+		drawBoundary(coordArray);       
     },
 
     hoveredIn : function()
