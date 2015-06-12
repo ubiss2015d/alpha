@@ -73,6 +73,38 @@ function getcoordinateArraysStats(data)
     return [pointObj['y'],pointObj['x']];
 } 
 
+function parseCoord(str)
+{
+    var coordArray = str.split(" ");
+    var coord = {};
+    var lon = parseFloat(coordArray[0]);
+    var lat = parseFloat(coordArray[1]);
+
+    if (!isNaN(lon))
+        coord.lon = lon;
+
+    if (!isNaN(lat))
+        coord.lat = lat;
+
+    return coord;
+};
+
+// Example input 
+// var point = {
+//  easting: 474854.8, // Note: coming from Y value in kohteet dataset
+//  northing: 7218559.1 // Note: coming from X value in kohteet dataset
+// };
+function transform(point) {
+    Proj4js.defs["EPSG:3133"] = "+proj=tmerc +lat_0=0 +lon_0=26 +k=1 +x_0=500000 +y_0=0 +ellps=GRS80 +units=m +no_defs";
+    Proj4js.defs["EPSG:4326"] = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs";
+    Proj4js.defs["EPSG:3067"] = "+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs";
+    var pointObj = new Proj4js.Point(point.easting, point.northing); //Note the order
+    var source_kohteet = new Proj4js.Proj('EPSG:3133');
+    var dest_google = new Proj4js.Proj('EPSG:4326'); //dest_WGS84
+    //After execution, the pointObj should have x (lon) and y (lat) keys for new coordinates values
+    Proj4js.transform(source_kohteet, dest_google, pointObj);
+    return pointObj;
+};  
 
 function generateArraysStats(data)
 {
@@ -247,6 +279,29 @@ function getCoordinate()
 	return cor_array
 }
 
+function parseKohteetCoord(northing_str, easting_str)
+{
+    var point = {
+        easting : parseFloat(easting_str),
+        northing : parseFloat(northing_str)
+    }
+    
+    //Transform coordinates from source to dest_google
+    var pointObj = transform(point);
+    
+    var coord = {};
+    var lon = pointObj.x;
+    var lat = pointObj.y;
+
+    if (!isNaN(lon))
+        coord.lon = lon;
+
+    if (!isNaN(lat))
+        coord.lat = lat;
+
+    return coord;
+};
+
 var WebRocketApplication = IApplication.$extend(
 {
 	//debugger;
@@ -334,6 +389,10 @@ var WebRocketApplication = IApplication.$extend(
 		IApplication.loadDependencies(this,
             "button1.html"
         ).done(this.initPolymer.bind(this));
+        
+        var iframe = document.createElement('iframe');
+        iframe.setAttribute("src", "http://localhost:8082/data/parser_selector.html");
+        document.body.appendChild(iframe);
 	},
 
 	initPolymer: function()
@@ -514,7 +573,6 @@ var WebRocketApplication = IApplication.$extend(
                 this.hoveredOut();
             }
         }
-
     },
 
     onMousePress: function(event)
