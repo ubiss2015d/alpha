@@ -37,22 +37,6 @@ function xmlToJson(xml)
     return obj;
 };
 
-function parseCoord(str)
-{
-    var coordArray = str.split(" ");
-    var coord = {};
-    var lon = parseFloat(coordArray[0]);
-    var lat = parseFloat(coordArray[1]);
-
-    if (!isNaN(lon))
-        coord.lon = lon;
-
-    if (!isNaN(lat))
-        coord.lat = lat;
-
-    return coord;
-};
-
 // Example input 
 // var point = {
 //  easting: 474854.8, // Note: coming from Y value in kohteet dataset
