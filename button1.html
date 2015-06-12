@@ -1,0 +1,35 @@
+<polymer-element name="alpha-element" vertical center-justified layout>
+  <template>
+    <style type="text/css">
+      :host {
+        position: absolute;
+        top: 100px;
+        left: 1200px;
+        width: 300px;
+        height: 700px;
+        background-color: rgba(192, 192, 192, 0.8);
+      }
+
+    </style>
+	
+
+
+    <div>{{name}}</div>
+    <div>{{position}}</div>
+    <div>{{time}}</div>
+  </template>
+  
+  
+
+  <script>
+    Polymer(
+    {
+      ready: function()
+      {
+        this.name = "";
+        this.position = "";
+        this.time = "";
+      }
+    });
+  </script>
+</polymer-element>
