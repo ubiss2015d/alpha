@@ -1,34 +1,16 @@
 <polymer-element name="alpha-element" vertical center-justified layout>
   <template>
-  <!--
-    <style>
-
-    body {
-      font-family: RobotoDraft, 'Helvetica Neue', Helvetica, Arial;
-      margin: 0;
-      padding: 24px;
-    }
-
-    core-toolbar {
-      color: #f1f1f1;
-      fill: #f1f1f1;
-    }
-    
-    </style> -->
     <style type="text/css">
       :host {
         position: absolute;
-        top: 100px;
+        top: 500px;
         left: 1200px;
         width: 300px;
         height: 700px;
         background-color: rgba(192, 192, 192, 0.8);
       }
-
     </style>
 	
-
-
     <div>{{name}}</div>
     <div>{{position}}</div>
     <div>{{time}}</div>
@@ -53,34 +35,57 @@
   <template>
     <style>
     :host {
-      display: block;
-      position: absolute;
-      background-color: white;
-      padding: 20px;
-      width: 100%;
-      font-size: 1.2rem;
-      font-weight: 300;
+        position: absolute;
+        background: rgba(222,222,222,0.8);
+        padding: 10px;
+        width: 600px;
+        height: 200px;
+        right: 200px;
+        border-radius: 30px;
+        top: 20px;
+        font-size: 2.4rem;
+        font-weight: 600;
+        -webkit-animation: fadeIn 800ms ease;
+                animation: fadeIn 800ms ease;
     }
     .card-header {
       margin-bottom: 10px;
     }
-    polyfill-next-selector { content: '.card-header h2'; }
-    .card-header ::content h2 {
+    polyfill-next-selector { content: '.card-header span'; }
+    .card-header ::content span {
       margin: 0;
-      font-size: 1.8rem;
-      font-weight: 300;
+      font-size: 2rem;
+      font-weight: 600;
     }
     polyfill-next-selector { content: '.card-header img'; }
     .card-header ::content img {
-      width: 70px;
+      width: 140px;
       border-radius: 50%;
-      margin: 10px;
+      margin: 20px;
     }
+    
+    @-webkit-keyframes fadeIn {
+        0%   { opacity: 0; }
+        100% { opacity: 1; }
+    }
+    
+    @keyframes fadeIn {
+        0%   { opacity: 0; }
+        100% { opacity: 1; }
+    }
+    
+    :host[hidden] {
+        -webkit-animation: fadeOut 800ms ease;
+                animation: fadeOut 800ms ease;
+    }
+    
     </style>
 
-    <div class="card-header" layout horizontal center>
-      <img id="venueIcon" src="{{venueIcon}}" width="21" height="21"></core-icon-button>
-      <h2>{{venueHeader}}</h2>
+    <div class="card-header" layout vertical center>
+      <img id="venueIcon" src="{{venueIcon}}" width="42" height="42"></core-icon-button>
+      <span>{{venueHeader}}</span>
+      <span>{{venueName}}</span>
+      <span>{{venueDescription}}</span>
     </div>
     <content></content>   
   </template>
@@ -89,6 +94,8 @@
     ready: function(){
 		this.venueHeader = "";
 		this.venueIcon = "";
+        this.venueName = "";
+        this.venueDescription = "";
     }
 });
   </script>

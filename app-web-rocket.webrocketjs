@@ -2,8 +2,24 @@
 
 var concatChar = ';';
 var statData;
-var coordArray;
+var coordArrayAng=[];
+var coordArrayRect=[];
 var iframeUrl = "http://localhost:8082/data/parser_selector.html";
+
+function transformWGS84toETRS(point) {
+
+   Proj4js.defs["EPSG:3067"] = "+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs";
+    Proj4js.defs["EPSG:4326"] = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs";
+    
+    var pointObj = new Proj4js.Point(point[1], point[0]); //Note the order
+    var source_kohteet = new Proj4js.Proj('EPSG:4326');
+    var dest_google = new Proj4js.Proj('EPSG:3067'); //dest_WGS84
+    //After execution, the pointObj should have x (lon) and y (lat) keys for new coordinates values
+    Proj4js.transform(source_kohteet, dest_google, pointObj);
+
+    //OBS! the x/y order may cause some mess
+    return [pointObj['y'],pointObj['x']];
+}
 
 function readStats()
 {
@@ -12,7 +28,7 @@ function readStats()
 	{
 		statData=generateArraysStats(asset.data);
 		console.log("done parsing");
-		coordArray=getcoordinateArraysStats(statData);
+		coordArrayAng=getcoordinateArraysStats(statData);
 		console.log("done extracting coordinates")
 
 	});
@@ -20,7 +36,7 @@ function readStats()
 	{
 		console.log("Failed", transfer, reason, metadata);
 	})
-	return coordArray;
+	return coordArrayAng;
 }
 
 function getcoordinateArraysStats(data)
@@ -73,6 +89,61 @@ function getcoordinateArraysStats(data)
 
     return [pointObj['y'],pointObj['x']];
 } 
+
+function findClosestDistrict(point) {
+           var min=1000000000;
+           var closestPostal="";
+           var dist=0;
+
+           var districtIndex=0;
+       for (var key in statData)
+       {
+
+           
+           //dist 
+           dist=Math.sqrt(Math.pow((statData[key][4]-point[0]),2)+Math.pow((statData[key][5]-point[1]),2));
+           
+           if(dist<min && key>0)
+           {
+               min=dist;
+               closestPostal=statData[key][2];
+               districtIndex=key;
+
+               
+           }
+       }
+
+       console.log(closestPostal);
+   
+   return districtIndex;
+}
+
+function drawBoundary(coordArray, center_index)
+{
+    // Remove the previous route
+    Tundra.renderer.scene.remove( this.highlighted_route );
+    
+    var line_material = new THREE.LineBasicMaterial({
+        color: 0xFF0000,
+        linewidth: 100
+        });
+        
+    var line_geometry = new THREE.Geometry();
+    
+    for (var i = 0; i < coordArray[center_index].length; i++){
+        var lat = coordArray[center_index][i][0];
+        var lon = coordArray[center_index][i][1];
+        var pos = Tundra.plugins.meshmoonGeo.coordinates.latLonToWorldPosition(lat, lon);
+        // height of the line from the ground
+        pos.y = 25;
+        line_geometry.vertices.push(pos);        
+    }
+    
+    var line = new THREE.Line( line_geometry, line_material );
+    this.highlighted_route = line;
+    Tundra.renderer.scene.add( this.highlighted_route );
+}
+
 
 function parseCoord(str)
 {
@@ -318,7 +389,7 @@ var WebRocketApplication = IApplication.$extend(
 
 		$.getScript( "http://svn.osgeo.org/metacrs/proj4js/branches/proj4js-1.0/lib/proj4js-combined.js" )
 			.done(function( script, textStatus ) {
-				coordArray = readStats();
+				coordArrayAng = readStats();
 				
 			})
 			.fail(function( jqxhr, settings, exception ) {	
@@ -379,17 +450,17 @@ var WebRocketApplication = IApplication.$extend(
             "button1.html"
         ).done(this.initPolymer.bind(this));
 
-        var iframe = document.createElement('iframe');
-        $(iframe).css({
+        this.dashboard_iframe = document.createElement('iframe');
+        $(this.dashboard_iframe).css({
             position: "absolute",
             "background-color" : "white",
-            width: "400px",
+            width: "350px",
             height: "100%",
-            right: "0px",
+            left: "0px",
             top : "0px"
         });
-        iframe.setAttribute("src", iframeUrl + "?suburb=Hiironen");
-        document.body.appendChild(iframe);
+        document.body.appendChild(this.dashboard_iframe);
+        this.dashboard_iframe.setAttribute("src", iframeUrl + "?lat=" + 65.013439 + "&lon=" + 25.466228);
 	},
    
     onAssetLoaded : function(asset)
@@ -399,16 +470,12 @@ var WebRocketApplication = IApplication.$extend(
 
 	initPolymer: function()
 	{
-		var element = document.createElement("venue-card");
-		element.venueHeader = "SOme venyue";
-		element.venueIcon = "http://tundra-blueshift.s3.amazonaws.com/koste/jilin_png/OP_Hotelli.png";
-		element.appendChild($("<p>Some description about a <a href='http://www.google.com' target='_blank'> venue</a></p>")[0]);
-
-		Tundra.ui.add(element);
-		$(element).width(500);
-		$(element).height(800);
-	
-		
+		this.venueCard = document.createElement("venue-card");
+		this.venueCard.venueHeader = "SOme venyue";
+		this.venueCard.venueIcon = "http://tundra-blueshift.s3.amazonaws.com/koste/jilin_png/OP_Hotelli.png";
+		//this.venueCard.appendChild($("<p>Some description about a <a href='http://www.google.com' target='_blank'> venue</a></p>")[0]);
+        this.venueCard.hidden = true;
+		Tundra.ui.add(this.venueCard);
 		//element.name = "information 1";
 //element.position = "ioformation 2";
 		//element.time = "information 3";
@@ -417,8 +484,6 @@ var WebRocketApplication = IApplication.$extend(
     onKohteetAssetTransferCompleted: function(asset)
     {
         var obj = xmlToJson(asset.data);
-        
-        console.log(obj);
         
         if(obj.teklaXcitySearchConfiguration && obj.teklaXcitySearchConfiguration.categoryDefaults
             && obj.teklaXcitySearchConfiguration.categoryDefaults.CategoryLabel
@@ -442,8 +507,6 @@ var WebRocketApplication = IApplication.$extend(
                 };
             }
         }
-            
-        console.log(this.kohteet_category_label);
         
         //Add the category hierarchy info
         if(obj.teklaXcitySearchConfiguration && obj.teklaXcitySearchConfiguration.categoryHierarcy
@@ -466,8 +529,6 @@ var WebRocketApplication = IApplication.$extend(
                 }
             }
         }
-                
-        console.log(this.kohteet_category_hierarcy);
         
         //Care of the backslash                           
         var EXCEPTION_IMAGE_URL = "\\\\oukasrv475\\Oulu_kuvat\\viralliset_asemakaavat\\http_//kartta.ouka.fi/system_bmp/OP_moottoriurheilu.gif";
@@ -550,7 +611,6 @@ var WebRocketApplication = IApplication.$extend(
             // entity.billboard.height = 210;
             // entity.billboard.onHoverIn = this.onHoverInHandle.bind(this.kohteet_data[entity.id]);
             // entity.billboard.onHoverOut = this.onHoverOutHandle.bind(this.kohteet_data[entity.id]);
-            console.log(this.kohteet_data);
         }
     },
 
@@ -579,6 +639,7 @@ var WebRocketApplication = IApplication.$extend(
 
     onMousePress: function(event)
     {
+        
         var r = Tundra.renderer.raycast(undefined, undefined, 0, this.billboards, false);
         if (r.entity && this.kohteet_data[r.entity.id])
         {
@@ -588,22 +649,32 @@ var WebRocketApplication = IApplication.$extend(
             console.log(this.kohteet_data[r.entity.id].description);
             console.log(this.kohteet_data[r.entity.id].url);
         } 
-
-        console.log("coordinates", coordArray);
-		var cor_array = getCoordinate();
-		console.log(cor_array.lat, cor_array.lon);
-		console.log("length = ", coordArray.length);
-		drawBoundary(coordArray);       
+        
+        var cor_array = getCoordinate();
+        var cor_standard_fin = transformWGS84toETRS([cor_array.lat, cor_array.lon]);
+        var closestDistrictIndex = findClosestDistrict([cor_standard_fin[1], cor_standard_fin[0]]);
+        console.log(coordArrayAng, closestDistrictIndex);
+        //drawBoundary(coordArrayAng, closestDistrictIndex);
+        
+        this.dashboard_iframe.setAttribute("src", iframeUrl + "?lat=" + cor_array.lat + "&lon=" + cor_array.lon);
+        
+        
     },
 
     hoveredIn : function()
     {
         console.log("Hovered in", this.lastHoveredBillboard);
+        this.venueCard.hidden = false;
+        this.venueCard.venueHeader = this.kohteet_data[this.lastHoveredBillboard].category;
+        this.venueCard.venueName = this.kohteet_data[this.lastHoveredBillboard].name;
+        this.venueCard.venueDescription = this.kohteet_data[this.lastHoveredBillboard].description;
+        this.venueCard.venueIcon = this.kohteet_data[this.lastHoveredBillboard].image_url;
     },
 
     hoveredOut : function()
     {
         console.log("Hovered out");
+        this.venueCard.hidden = true;
     },
 
     onActiveCameraChanged : function(activeCameraComponent, prevCameraComponent)
